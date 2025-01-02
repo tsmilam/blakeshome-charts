@@ -33,6 +33,25 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+      {{- if or .Values.extraInitContainers (and .Values.persistence.config.enabled .Values.persistence.config.ephemeralWritableConfigYaml) }}
+      initContainers:
+      {{- with .Values.extraInitContainers }}
+      {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.persistence.config.enabled .Values.persistence.config.ephemeralWritableConfigYaml }}
+      - name: copyconfig
+        image: "{{ .Values.image.repository }}:{{ include "frigate.imageTag" . }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - mountPath: /config.yml
+          subPath: config.yml
+          name: configmap
+        - mountPath: /config
+          name: config
+        command: [ "cp" ]
+        args: [ "-v", "/config.yml", "/config/config.yaml" ]
+      {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ include "frigate.imageTag" . }}"
